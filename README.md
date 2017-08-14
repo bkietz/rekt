@@ -1,4 +1,4 @@
-# rekt
+# records
 
 Records are associative collections of heterogenous elements.
 They are a very nifty metaprogramming utility.
@@ -9,7 +9,7 @@ You can define your own records wherever you need them, like tuples:
 auto igor = make_record(name="igor"s, age=34, friends={"Frankie"s, "Charles"s});
 assert(name(igor) == "igor");
 assert(age(igor) == 34);
-assert(friends(igor) == array<string, 2>{"Frankie", "Charlie"});
+assert(friends(igor) == array<string, 2>{"Frankie", "Charles"});
 
 // write access too, natch
 name(igor) = "Igor";
@@ -69,7 +69,7 @@ namespace gamer { REKT_SYMBOLS(name); }
 assert(nameof(name) == "name");
 assert(nameof(gamer::name) == "gamer::name");
 
-auto no_conflict = make_record(name = "Igor"s, gamer::name = "1G0r"s);
+auto no_conflict = make_record(name="Igor"s, gamer::name="1G0r"s);
 ```
 
 Symbols can access their own (fully qualified) names.
