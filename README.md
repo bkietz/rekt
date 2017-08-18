@@ -6,14 +6,14 @@ They are a very nifty metaprogramming utility.
 You can define your own records wherever you need them, like tuples:
 
 ```c++
-auto igor = make_record(name="igor"s, age=34, friends={"Frankie"s, "Charles"s});
-assert(name(igor) == "igor");
-assert(age(igor) == 34);
-assert(friends(igor) == array<string, 2>{"Frankie", "Charles"});
+auto genos = make_record(name="genos"s, age=18, friends={"Saitama"s, "Kuseno"s});
+assert(name(genos) == "genos");
+assert(age(genos) == 18);
+assert(friends(genos) == array<string, 2>{"Saitama", "Kuseno"});
 
 // write access too, natch
-name(igor) = "Igor";
-age(igor)++;
+name(genos) = "Genos";
+age(genos)++;
 ```
 
 You can also adapt other structures as records with minimal boilerplate.
@@ -32,29 +32,29 @@ auto get(rekt::properties, person_t const&)
   );
 }
 
-person_t igor{ "Igor", 35 }; 
-assert(name(igor) == "Igor");
-assert(age(igor) == 35);
+person_t genos{ "Genos", 19 }; 
+assert(name(genos) == "Genos");
+assert(age(genos) == 19);
 // friends is a readonly property of person_t, so this would be a compiler error:
-//friends(igor) = vector<string>{ "Me" };
+//friends(genos) = vector<string>{ "Me" };
 ```
 
 Since symbols are static information, the compiler is checking every access to a record-
 it's impossible to accidentally access an undefined field.
 
 ```c++
-//email(igor); // compile error; igor doesn't define a field for email
+//email(genos); // compile error; genos doesn't define a field for email
 ```
 
 ... but sometimes the fields you have are not right for the job you need done.
 Rekt provides utilities to easily compose and manipulate records, allowing fields to be defined as needed.
 
 ```c++
-email(igor & (email="igor@svobotnik.net"s)); // augment with a field for email
+email(genos & (email="genos@heroassociation.jp"s)); // augment with a field for email
 
-assert(age(igor ^ (age="thirty five"s)) == "thirty five"); // override age to a string
+assert(age(genos ^ (age="nineteen"s)) == "nineteen"); // override age to a string
 
-auto age_only = take(igor, age);
+auto age_only = take(genos, age);
 //name(age_only); // compile error, name was explicitly removed
 ```
 
@@ -64,20 +64,20 @@ your symbol `name` will not collide with anyone else's, not even within a single
 
 ```c++
 REKT_SYMBOLS(name, email, age,  friends);
-namespace gamer { REKT_SYMBOLS(name); }
+namespace hero { REKT_SYMBOLS(name); }
 
 assert(nameof(name) == "name");
-assert(nameof(gamer::name) == "gamer::name");
+assert(nameof(hero::name) == "hero::name");
 
-auto no_conflict = make_record(name="Igor"s, gamer::name="1G0r"s);
+auto no_conflict = make_record(name="Genos"s, hero::name="Blond Cyborg"s);
 ```
 
 Symbols can access their own (fully qualified) names.
 This allows most record types to be unpacked from associative containers like parsed JSON objects trivially:
 
 ```c++
-person_t igor = unpack(type_c<person_t>, nlohmann::json{{
-  {"name", "Igor"},
+person_t genos = unpack(type_c<person_t>, nlohmann::json{{
+  {"name", "Genos"},
   {"age", 35}
 });
 ```
