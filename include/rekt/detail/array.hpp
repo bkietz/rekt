@@ -22,7 +22,7 @@ constexpr std::array<Element, sizeof...(I)> make_array(Element const *ptr, index
 template <typename Element, std::size_t N>
 constexpr std::array<Element, N> make_array(Element const *ptr, index_constant<N> const &)
 {
-  return make_array(arr, make_index_sequence<N>{});
+  return make_array(ptr, make_index_sequence<N>{});
 }
 
 template <typename Element, std::size_t N>
