@@ -161,3 +161,25 @@ TEST_CASE("record composition functions")
   }
 }
 
+#include <rekt/introspection.hpp>
+REKT_SYMBOLS(name);
+
+struct person_t
+{
+  std::string name;
+};
+
+auto get(rekt::properties, person_t const&)
+{
+  return make_record(name = &person_t::name);
+}
+
+
+TEST_CASE("introspection functions")
+{
+  static_assert(rekt::has_property_for<struct name, person_t>(), "person_t defines name");
+
+  person_t genos = { "genos" };
+
+  REQUIRE(name(genos) == "genos");
+}
