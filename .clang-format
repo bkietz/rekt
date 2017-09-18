@@ -1,0 +1,15 @@
+﻿---
+BasedOnStyle: WebKit
+AlignAfterOpenBracket: Align
+AlignEscapedNewlines: Left
+AlignTrailingComments: 'true'
+AccessModifierOffset: '-2'
+BreakBeforeBinaryOperators: NonAssignment
+BreakBeforeBraces: Allman
+DerivePointerAlignment: 'false'
+IndentWidth: '2'
+NamespaceIndentation: None
+PointerAlignment: Right
+UseTab: Never
+
+...

@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <rekt/detail/array.hpp>
 #include <rekt/detail/map_macro.hpp>
 #include <rekt/record_traits.hpp>
 
@@ -207,6 +208,12 @@ struct symbol
     return make_field(Symbol{}, std::forward<Value>(value));
   }
 
+  template <typename Value, std::size_t N>
+  constexpr auto operator=(Value const (&value)[N]) const
+  {
+    return make_field(Symbol{}, make_array(value));
+  }
+
   template <typename Record>
   constexpr decltype(auto) operator()(Record &&r) const
   {
@@ -284,6 +291,12 @@ constexpr auto take(Record &&r, symbol_set<Symbols...> const & = {})
   return make_record(make_field(Symbols{}, get(Symbols{}, std::forward<Record>(r)))...);
 }
 
+template <typename... Symbols, typename Record>
+constexpr auto take(Record &&r, Symbols const &...)
+{
+  return make_record(make_field(Symbols{}, get(Symbols{}, std::forward<Record>(r)))...);
+}
+
 ///
 /// Construct a record by applying a function to each field
 /// associated with the symbols from a the given symbol set.
@@ -314,18 +327,32 @@ constexpr auto merge(RecordRefs &&... rs);
 template <typename... RecordRefs>
 class merged_records;
 
-template <>
-class merged_records<>
-{
-};
-
-template <typename Head, typename... Tail>
-class merged_records<Head, Tail...>
+template <typename Head>
+class merged_records<Head>
 {
 public:
-  merged_records(Head h, Tail... t)
+  merged_records(Head h)
       : head{ static_cast<Head>(h) }
-      , tail{ static_cast<Tail>(t)... }
+  {
+  }
+
+private:
+  template <typename Symbol>
+  friend constexpr decltype(auto) get(Symbol const &s, merged_records m)
+  {
+    return get(s, m.head);
+  }
+
+  Head head;
+};
+
+template <typename Head, typename Tail0, typename... Tail>
+class merged_records<Head, Tail0, Tail...>
+{
+public:
+  merged_records(Head h, Tail0 t0, Tail... t)
+      : head{ static_cast<Head>(h) }
+      , tail{ static_cast<Tail0>(t0), static_cast<Tail>(t)... }
   {
   }
 
@@ -337,7 +364,7 @@ private:
   }
 
   Head head;
-  merged_records<Tail...> tail;
+  merged_records<Tail0, Tail...> tail;
 };
 
 template <typename... Records>

@@ -66,5 +66,8 @@ has_all_impl(symbol_set<Symbol0, Symbols...> const &)
 template <typename SymbolSet, typename Record>
 constexpr auto has_all = has_all_impl<Record>(SymbolSet{});
 
+template <typename Symbol, typename Record>
+using field_type_for = decltype(get(Symbol{}, type_c<Record>.declval()));
+
 } // namespace
 } // namespace rekt
