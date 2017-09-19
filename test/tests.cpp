@@ -9,6 +9,19 @@ REKT_SYMBOLS(height, width, label);
 // DODO test with move-only objects!!!
 // TODO break these into smaller cases with tags
 
+// TODO find a home for these:
+//static_assert(rekt::has<struct height, rekt::field<struct height, int&&>>, "a field has a field defined for its symbol");
+//static_assert(rekt::has<struct height, rekt::field<struct height, int&&> const>, "a field has a field defined for its symbol");
+//static_assert(rekt::has<struct height, rekt::field<struct height, int&&> &>, "a field has a field defined for its symbol");
+//static_assert(rekt::has<struct height, rekt::field<struct height, int&&> const&>, "a field has a field defined for its symbol");
+//static_assert(rekt::has<struct height, rekt::field<struct height, int&&> &&>, "a field has a field defined for its symbol");
+//
+//static_assert(!rekt::has<struct width, rekt::field<struct height, int&&>>, "a field has a field defined for its symbol");
+//static_assert(!rekt::has<struct width, rekt::field<struct height, int&&> const>, "a field has a field defined for its symbol");
+//static_assert(!rekt::has<struct width, rekt::field<struct height, int&&> &>, "a field has a field defined for its symbol");
+//static_assert(!rekt::has<struct width, rekt::field<struct height, int&&> const&>, "a field has a field defined for its symbol");
+//static_assert(!rekt::has<struct width, rekt::field<struct height, int&&> &&>, "a field has a field defined for its symbol");
+
 TEST_CASE("similar records with different factories")
 {
   using namespace std::string_literals;
@@ -45,11 +58,10 @@ TEST_CASE("similar records with different factories")
     static_assert(std::is_same<decltype(label(crec)), std::string const &>(), "float field");
   }
 
-  {
+  auto const three = 3.F;
+  auto four = 4.F;
+  auto test_forward_as_record = [&](auto &&rectangle) {
     // forward_as_record
-    auto const three = 3.F;
-    auto four = 4.F;
-    auto rectangle = rekt::forward_as_record(height = three, width = four, label = "rect"s);
     using rectangle_type = decltype(rectangle);
     static_assert(rekt::has<struct height, rectangle_type>, "rectangles have height");
     static_assert(rekt::has<struct width, rectangle_type>, "rectangles have width");
@@ -57,14 +69,14 @@ TEST_CASE("similar records with different factories")
     static_assert(std::is_same<rekt::record<
                                    rekt::field<struct height, float const &>,
                                    rekt::field<struct width, float &>,
-                                   rekt::field<struct label, std::string &&>>,
+                                   rekt::field<struct label, std::string &&>> &&,
                                rectangle_type>(),
                   "forward_as_record leaves references alone");
     static_assert(std::is_same<decltype(height(rectangle)), float const &>(), "float field");
     static_assert(std::is_same<decltype(width(rectangle)), float &>(), "float field");
     static_assert(std::is_same<decltype(label(rectangle)), std::string &&>(), "float field");
-    //REQUIRE(&(height(rectangle)) == &three); // field is const lvalue
-    auto const &also_three = height(rectangle);
+
+    REQUIRE(&(height(rectangle)) == &three); // field is const lvalue
     width(rectangle) = 2.6F; // field is lvalue
     auto l = label(rectangle); // field is rvalue
     REQUIRE(l == "rect");
@@ -77,42 +89,19 @@ TEST_CASE("similar records with different factories")
     static_assert(std::is_same<decltype(height(crec)), float const &>(), "float field");
     static_assert(std::is_same<decltype(width(crec)), float &>(), "float field");
     static_assert(std::is_same<decltype(label(crec)), std::string &&>(), "float field");
-  }
+  };
 
-  {
-    // forward_as_record
-    auto const three = 3.F;
-    auto four = 4.F;
-    auto rectangle = rekt::forward_as_record(three - as_(height), let_(width) = four, label = "rect"s);
-    using rectangle_type = decltype(rectangle);
-    static_assert(rekt::has<struct height, rectangle_type>, "rectangles have height");
-    static_assert(rekt::has<struct width, rectangle_type>, "rectangles have width");
-    static_assert(rekt::has<struct label, rectangle_type>, "rectangles have label");
-    static_assert(std::is_same<rekt::record<
-                                   rekt::field<struct height, float const &>,
-                                   rekt::field<struct width, float &>,
-                                   rekt::field<struct label, std::string &&>>,
-                               rectangle_type>(),
-                  "forward_as_record leaves references alone");
-    static_assert(std::is_same<decltype(height(rectangle)), float const &>(), "float field");
-    static_assert(std::is_same<decltype(width(rectangle)), float &>(), "float field");
-    static_assert(std::is_same<decltype(label(rectangle)), std::string &&>(), "float field");
-    //REQUIRE(&(height(rectangle)) == &three); // field is const lvalue
-    auto const &also_three = height(rectangle);
-    width(rectangle) = 2.6F; // field is lvalue
-    auto l = label(rectangle); // field is rvalue
-    REQUIRE(l == "rect");
-  }
+  test_forward_as_record(rekt::forward_as_record(height = three, width = four, label = "rect"s));
+  test_forward_as_record(rekt::forward_as_record(three - as_(height), let_(width) = four, label = "rect"s));
 }
 
 REKT_SYMBOLS(dimensions);
 
 TEST_CASE("array sugar")
 {
-  using namespace std::string_literals;
-
-  auto cuboid = rekt::make_record(dimensions = { 3, 4, 5 });
+  auto cuboid = rekt::make_record(dimensions = { 3, 4, 5 }, label = "cuboid");
   REQUIRE(dimensions(cuboid) == (std::array<int, 3>{ 3, 4, 5 }));
+  REQUIRE(label(cuboid) == (std::array<char, 7>{ 'c', 'u', 'b', 'o', 'i', 'd', '\0' }));
 }
 
 TEST_CASE("record composition functions")
@@ -138,30 +127,40 @@ TEST_CASE("record composition functions")
   }
 
   {
-    using override_height_type = decltype(rectangle ^ (height = "four"s));
+    using override_add = decltype(merge(height = "four"s, rectangle, dimensions = 2));
 
-    static_assert(rekt::has<struct height, override_height_type>, "rectangles have height, but that field is not usually a string");
-    static_assert(rekt::has<struct width, override_height_type>, "rectangles have width");
-    static_assert(rekt::has<struct label, override_height_type>, "rectangles have label");
-
-    static_assert(std::is_same<std::string &&, decltype(height(rekt::type_c<override_height_type>.declval()))>(),
-                  "the height field is overridden to a string");
-    REQUIRE(height(rectangle ^ (height = "four"s)) == "four"s);
+    static_assert(rekt::has<struct height, override_add>, "rectangles have height, but that field is not usually a string");
+    static_assert(rekt::has<struct dimensions, override_add>, "augmented with dimensions");
   }
 
   {
-    using add_dimensions_type = decltype(rectangle & (dimensions = std::make_pair(height, width)));
+    using override_height = decltype(rectangle ^ (height = "four"s));
 
-    //static_assert(rekt::has<struct dimensions, add_dimensions_type>, "augmented with field for dimensions");
+    static_assert(rekt::has<struct height, override_height>, "rectangles have height, but that field is not usually a string");
+    static_assert(std::is_same<std::string &&, rekt::field_type_for<struct height, override_height>>(),
+                  "the height field is overridden to a string");
+    static_assert(rekt::has<struct width, override_height>, "rectangles have width");
+    static_assert(rekt::has<struct label, override_height>, "rectangles have label");
 
-    //auto &&dims = dimensions(rectangle & (dimensions = std::make_pair(height, width)));
-    //static_assert(std::is_same<decltype(std::make_pair(height, width)), decltype(get(dimensions, rekt::type_c<add_dimensions_type>.declval()))>(),
-    //              "the dimensions field is defined as a pair of symbols naming the axes which this rectangle spans");
-    //REQUIRE(dims == std::make_pair(height, width));
+    REQUIRE(height(rectangle ^ (height = "four"s)) == "four"s);
+    REQUIRE(width(rectangle ^ (height = "four"s)) == width(rectangle));
+    REQUIRE(label(rectangle ^ (height = "four"s)) == label(rectangle));
+  }
+
+  {
+    using add_dimensions = decltype(rectangle & (dimensions = std::make_pair(height, width)));
+
+    static_assert(rekt::has<struct dimensions, add_dimensions>, "augmented with field for dimensions");
+
+    auto t = rekt::type_c<decltype(dimensions(rekt::type_c<add_dimensions>.declval()))>;
+    auto t2 = rekt::type_c<decltype(std::make_pair(height, width))>;
+    static_assert(std::is_same<std::pair<struct height, struct width> &&,
+                               rekt::field_type_for<struct dimensions, add_dimensions>>(),
+                  "the dimensions field is defined as a pair of symbols naming the axes which this rectangle spans");
+    REQUIRE(dimensions(rectangle & (dimensions = std::make_pair(height, width))) == std::make_pair(height, width));
   }
 }
 
-#include <rekt/introspection.hpp>
 REKT_SYMBOLS(name);
 
 struct person_t
@@ -169,11 +168,10 @@ struct person_t
   std::string name;
 };
 
-auto get(rekt::properties, person_t const&)
+auto get(rekt::properties, person_t const &)
 {
   return make_record(name = &person_t::name);
 }
-
 
 TEST_CASE("introspection functions")
 {

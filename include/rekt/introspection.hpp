@@ -58,7 +58,7 @@ constexpr bool has_property_for()
 template <class Class, typename Data>
 constexpr decltype(auto) make_property_reference(Data std::decay_t<Class>::*mptr, Class &&o)
 {
-  return std::forward<Class&&>(o).*mptr;
+  return std::forward<Class>(o).*mptr;
 }
 
 ///

@@ -31,6 +31,9 @@ constexpr auto has = has_impl<Symbol, Record>(nullptr);
 template <typename Symbol, typename Record, typename T = void>
 using enable_if_has = std::enable_if_t<has<Symbol, Record>, T>;
 
+template <typename Symbol, typename Record, typename T = void>
+using disable_if_has = std::enable_if_t<!has<Symbol, Record>, T>;
+
 ///
 /// symbol_set catches duplicates in a parameter pack of symbols.
 /// If you see a build error here, you probably tried to define

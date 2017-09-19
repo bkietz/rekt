@@ -190,12 +190,6 @@ constexpr auto forward_as_record(field<Symbol, Value> &&... fields)
   return record<field<Symbol, Value>...>{ std::move(fields)... };
 }
 
-template <typename... Symbol, typename... Value>
-constexpr auto r_(field<Symbol, Value> &&... fields)
-{
-  return record<field<Symbol, Value>...>{ std::move(fields)... };
-}
-
 ///
 /// CRTP helper for augmenting tag types used as symbols with some
 /// nifty, Haskell-style operator overloads
@@ -208,10 +202,16 @@ struct symbol
     return make_field(Symbol{}, std::forward<Value>(value));
   }
 
+  template <typename Value>
+  constexpr auto operator&=(Value &value) const
+  {
+    return make_field(Symbol{}, std::ref(value));
+  }
+
   template <typename Value, std::size_t N>
   constexpr auto operator=(Value const (&value)[N]) const
   {
-    return make_field(Symbol{}, make_array(value));
+    return field<Symbol, std::array<Value, N>>(make_array(value));
   }
 
   template <typename Record>
@@ -220,6 +220,18 @@ struct symbol
     return get(Symbol{}, std::forward<Record>(r));
   }
 };
+
+template <typename L, typename R>
+constexpr auto operator==(symbol<L> const &, symbol<R> const &)
+{
+  return std::is_same<L, R>{};
+}
+
+template <typename L, typename R>
+constexpr auto operator!=(symbol<L> const &l, symbol<R> const &r)
+{
+  return integer_c<bool, !(l == r)>;
+}
 
 ///
 /// Not Haskell (REBOL, anybody?) but allows concise field access
@@ -322,53 +334,46 @@ constexpr decltype(auto) get(Record &&r)
 /// Field access for a symbol on the view is deferred to the
 /// first of the records which defines a field for that symbol.
 template <typename... RecordRefs>
-constexpr auto merge(RecordRefs &&... rs);
-
-template <typename... RecordRefs>
 class merged_records;
 
-template <typename Head>
-class merged_records<Head>
+template <typename... Records>
+constexpr merged_records<Records &&...> merge(Records &&... rs);
+
+template <typename... RecordRefs>
+class merged_records
 {
 public:
-  merged_records(Head h)
-      : head{ static_cast<Head>(h) }
+  constexpr merged_records(RecordRefs... refs)
+      : refs_{ static_cast<RecordRefs>(refs)... }
   {
   }
 
 private:
   template <typename Symbol>
-  friend constexpr decltype(auto) get(Symbol const &s, merged_records m)
+  static constexpr std::size_t index_()
   {
-    return get(s, m.head);
+    return 0;
+  }
+  template <typename Symbol, typename Head, typename... Tail>
+  static constexpr std::size_t index_()
+  {
+    return has<Symbol, Head>
+        ? 0
+        : index_<Symbol, Tail...>() + 1;
   }
 
-  Head head;
-};
-
-template <typename Head, typename Tail0, typename... Tail>
-class merged_records<Head, Tail0, Tail...>
-{
-public:
-  merged_records(Head h, Tail0 t0, Tail... t)
-      : head{ static_cast<Head>(h) }
-      , tail{ static_cast<Tail0>(t0), static_cast<Tail>(t)... }
-  {
-  }
-
-private:
   template <typename Symbol>
-  friend constexpr decltype(auto) get(Symbol const &s, merged_records m)
+  friend constexpr decltype(auto) get(Symbol const &s, merged_records const &m,
+                                      std::enable_if_t<index_<Symbol, RecordRefs...>() < sizeof...(RecordRefs)> * = nullptr)
   {
-    return get(s, if_constexpr(has<Symbol, Head>, m.head, m.tail));
+    return get(s, std::get<index_<Symbol, RecordRefs...>()>(m.refs_));
   }
 
-  Head head;
-  merged_records<Tail0, Tail...> tail;
+  std::tuple<RecordRefs...> refs_;
 };
 
 template <typename... Records>
-constexpr auto merge(Records &&... rs)
+constexpr merged_records<Records &&...> merge(Records &&... rs)
 {
   return merged_records<Records &&...>{ std::forward<Records>(rs)... };
 }

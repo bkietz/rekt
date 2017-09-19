@@ -5,7 +5,8 @@
 
 #pragma once
 
-#include <rekt/utility.hpp>
-#include <rekt/record_traits.hpp>
+#include <rekt/introspection.hpp>
 #include <rekt/record.hpp>
+#include <rekt/record_traits.hpp>
 #include <rekt/symbols_macro.hpp>
+#include <rekt/utility.hpp>
