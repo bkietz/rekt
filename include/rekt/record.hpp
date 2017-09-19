@@ -78,9 +78,6 @@ public:
   {
     return static_cast<value_type &>(*this);
   }
-
-private:
-  value_type value_;
 };
 
 template <typename Symbol, typename Value>

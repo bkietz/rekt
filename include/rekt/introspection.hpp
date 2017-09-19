@@ -29,7 +29,7 @@ constexpr bool has_property_for(std::false_type is_properties, std::true_type ha
 }
 
 template <typename Symbol, typename Record>
-constexpr bool has_property_for(...)
+constexpr bool has_property_for(bool, ...)
 {
   return false;
 }
@@ -63,14 +63,15 @@ constexpr decltype(auto) make_property_reference(Data std::decay_t<Class>::*mptr
   return std::forward<Class>(o).*mptr;
 }
 
-template <class Class, typename Data>
+template <typename Ptr>
 struct wrapped_member_ptr_getter
 {
-  Data (Class::*ptr)();
+  Ptr ptr;
 
-  Data operator()(Class &o) const
+  template <typename Class>
+  constexpr decltype(auto) operator()(Class &&o) const
   {
-    return (o.*ptr)();
+    return (std::forward<Class>(o).*ptr)();
   }
 };
 
@@ -83,17 +84,18 @@ constexpr auto wrap_getter(Data g(RecordRef))
 template <class Class, typename Data>
 constexpr auto wrap_getter(Data (Class::*g)())
 {
-  return wrapped_member_ptr_getter<Class, Data>{ g };
+  return wrapped_member_ptr_getter<Data(Class::*)()>{ g };
 }
 
-template <class Class, typename Data, typename Return>
+template <typename Ptr>
 struct wrapped_member_ptr_setter
 {
-  Return (Class::*ptr)(Data);
+  Ptr ptr;
 
-  void operator()(Class &o, Data v) const
+  template <typename Class, typename Value>
+  void operator()(Class &&o, Value &&v) const
   {
-    (o.*ptr)(static_cast<Data>(v));
+    (std::forward<Class>(o).*ptr)(std::forward<Value>(v));
   }
 };
 
@@ -106,7 +108,7 @@ constexpr auto wrap_setter(Return s(RecordRef, Data))
 template <class Class, typename Data, typename Return>
 constexpr auto wrap_setter(Return (Class::*s)(Data))
 {
-  return wrapped_member_ptr_setter<Class, Data, Return>{ s };
+  return wrapped_member_ptr_setter<Return (Class::*)(Data)>{ s };
 }
 
 template <typename Getter, typename Setter>
