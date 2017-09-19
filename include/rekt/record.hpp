@@ -354,6 +354,7 @@ private:
   {
     return 0;
   }
+
   template <typename Symbol, typename Head, typename... Tail>
   static constexpr std::size_t index_()
   {

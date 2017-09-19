@@ -12,21 +12,49 @@ namespace rekt
 namespace
 {
 
-template <typename Symbol, typename Record>
-constexpr auto
-has_impl(type_constant<decltype(get(Symbol{}, std::declval<Record>()))> * = nullptr)
+template <typename Symbol>
+struct has_impl
 {
-  return std::true_type{};
+  template <typename Record>
+  static constexpr auto
+  test(type_constant<Record> const &, type_constant<decltype(get(Symbol{}, std::declval<Record>()))> * = nullptr)
+  {
+    return std::true_type{};
+  }
+
+  template <typename Record>
+  static constexpr auto test(type_constant<Record> const &, ...)
+  {
+    return std::false_type{};
+  }
+
+  static constexpr auto
+  test(type_constant<has_impl<Symbol>> const &, ...)
+  {
+    return has_impl<Symbol>();
+  }
+
+  template <typename Record>
+  constexpr auto operator()(Record &&) const
+  {
+    return test<Symbol>(type_c<Record &&>, nullptr);
+  }
+};
+
+template <typename Symbol, typename Record = has_impl<Symbol>>
+constexpr auto has = has_impl<Symbol>::test(type_c<Record>, nullptr);
+
+template <typename Symbol>
+constexpr auto has_(Symbol const &)
+{
+  return has<Symbol>;
 }
 
 template <typename Symbol, typename Record>
-constexpr auto has_impl(...)
+constexpr auto has_(Symbol const &, Record &&)
 {
-  return std::false_type{};
+  return has<Symbol, Record &&>;
 }
-
-template <typename Symbol, typename Record>
-constexpr auto has = has_impl<Symbol, Record>(nullptr);
 
 template <typename Symbol, typename Record, typename T = void>
 using enable_if_has = std::enable_if_t<has<Symbol, Record>, T>;

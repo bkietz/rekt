@@ -55,7 +55,7 @@ TEST_CASE("similar records with different factories")
     static_assert(rekt::has<struct label, crectangle_type>, "rectangles have label");
     static_assert(std::is_same<decltype(height(crec)), float const &>(), "float field");
     static_assert(std::is_same<decltype(width(crec)), float const &>(), "float field");
-    static_assert(std::is_same<decltype(label(crec)), std::string const &>(), "float field");
+    static_assert(std::is_same<decltype(label(crec)), std::string const &>(), "string field");
   }
 
   auto const three = 3.F;
@@ -74,7 +74,7 @@ TEST_CASE("similar records with different factories")
                   "forward_as_record leaves references alone");
     static_assert(std::is_same<decltype(height(rectangle)), float const &>(), "float field");
     static_assert(std::is_same<decltype(width(rectangle)), float &>(), "float field");
-    static_assert(std::is_same<decltype(label(rectangle)), std::string &&>(), "float field");
+    static_assert(std::is_same<decltype(label(rectangle)), std::string &&>(), "string field");
 
     REQUIRE(&(height(rectangle)) == &three); // field is const lvalue
     width(rectangle) = 2.6F; // field is lvalue
@@ -152,8 +152,6 @@ TEST_CASE("record composition functions")
 
     static_assert(rekt::has<struct dimensions, add_dimensions>, "augmented with field for dimensions");
 
-    auto t = rekt::type_c<decltype(dimensions(rekt::type_c<add_dimensions>.declval()))>;
-    auto t2 = rekt::type_c<decltype(std::make_pair(height, width))>;
     static_assert(std::is_same<std::pair<struct height, struct width> &&,
                                rekt::field_type_for<struct dimensions, add_dimensions>>(),
                   "the dimensions field is defined as a pair of symbols naming the axes which this rectangle spans");
@@ -161,23 +159,44 @@ TEST_CASE("record composition functions")
   }
 }
 
-REKT_SYMBOLS(name);
+REKT_SYMBOLS(name, age, friends);
 
 struct person_t
 {
   std::string name;
+  int age_;
+
+  int get_age()
+  {
+    return age_;
+  }
+  void set_age(int age)
+  {
+    age_ = age;
+  }
+
+  static auto get_friends(person_t const &p)
+  {
+    return p.name.size();
+  }
 };
 
 auto get(rekt::properties, person_t const &)
 {
-  return make_record(name = &person_t::name);
+  return make_record(name = &person_t::name,
+                     age = rekt::get_set(&person_t::get_age, &person_t::set_age),
+                     friends = person_t::get_friends);
 }
 
 TEST_CASE("introspection functions")
 {
-  static_assert(rekt::has_property_for<struct name, person_t>(), "person_t defines name");
+  static_assert(rekt::has<struct name, person_t>(), "person_t defines name");
+  static_assert(rekt::has<struct age, person_t>(), "person_t defines name");
 
-  person_t genos = { "genos" };
+  person_t genos = { "genos", 19 };
 
   REQUIRE(name(genos) == "genos");
+  REQUIRE(age(genos) == 19);
+  age(genos) = 20;
+  REQUIRE(age(genos) == 20);
 }
