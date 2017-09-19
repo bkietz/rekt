@@ -191,7 +191,8 @@ auto get(rekt::properties, person_t const &)
 TEST_CASE("introspection functions")
 {
   static_assert(rekt::has<struct name, person_t>(), "person_t defines name");
-  static_assert(rekt::has<struct age, person_t>(), "person_t defines name");
+  static_assert(rekt::has<struct age, person_t>(), "person_t defines age");
+  static_assert(rekt::has<struct friends, person_t>(), "person_t defines age");
 
   person_t genos = { "genos", 19 };
 

@@ -133,10 +133,10 @@ struct getter_setter_property_reference
     return cast();
   }
 
-  template <typename Data>
-  RecordRef &operator=(Data &&v) const
+  template <typename Value>
+  RecordRef &operator=(Value &&v) const
   {
-    gs_.second(static_cast<RecordRef>(ref_), std::forward<Data>(v));
+    gs_.second(static_cast<RecordRef>(ref_), std::forward<Value>(v));
     return ref_;
   }
 };
@@ -168,7 +168,7 @@ struct getter_property_reference
 template <typename Getter, typename Record>
 constexpr auto make_property_reference(Getter &&g, Record &&r)
 {
-  using data_type = decltype(gs.first(std::forward<Record>(r)));
+  using data_type = decltype(g(std::forward<Record>(r)));
   return getter_property_reference<Getter, Record, data_type>{ g, std::forward<Record>(r) };
 }
 
