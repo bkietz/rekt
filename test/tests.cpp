@@ -5,6 +5,7 @@
 
 REKT_SYMBOLS(height, width, label, dont);
 
+// helper for asserting non-constexpr integer_constants
 #define STATIC_REQUIRE(...) static_assert(decltype(__VA_ARGS__)::value, #__VA_ARGS__)
 
 // TODO test with move-only objects!!!
@@ -23,21 +24,21 @@ REKT_SYMBOLS(height, width, label, dont);
 //static_assert(!rekt::has<struct width, rekt::field<struct height, int&&> const&>, "a field has a field defined for its symbol");
 //static_assert(!rekt::has<struct width, rekt::field<struct height, int&&> &&>, "a field has a field defined for its symbol");
 
+using namespace std::string_literals;
+using rekt::type_c;
+
 TEST_CASE("similar records with different factories")
 {
-  using namespace std::string_literals;
-
   auto const three = 3.F;
   auto four = 4.F;
 
   SECTION("make_record")
   {
     auto rectangle = rekt::make_record(height = three, width = four, label = "rect"s);
-    STATIC_REQUIRE(rekt::has_(height, rectangle));
-    STATIC_REQUIRE(rekt::has_(width, rectangle));
-    STATIC_REQUIRE(rekt::has_(label, rectangle));
-    //STATIC_REQUIRE(!rekt::has_(dont, rectangle));
-    static_assert(!rekt::has<struct dont, decltype(rectangle)>, "");
+    STATIC_REQUIRE(height.in(rectangle));
+    STATIC_REQUIRE(width.in(rectangle));
+    STATIC_REQUIRE(label.in(rectangle));
+    STATIC_REQUIRE(dont.not_in(rectangle));
     static_assert(std::is_same<rekt::record<
                                    rekt::field<struct height, float>,
                                    rekt::field<struct width, float>,
@@ -55,11 +56,10 @@ TEST_CASE("similar records with different factories")
     label(rectangle).assign("Rect"); // field is lvalue
 
     auto const &crec = rectangle;
-    using crectangle_type = decltype(crec);
-    static_assert(rekt::has<struct height, crectangle_type>, "rectangles have height");
-    static_assert(rekt::has<struct width, crectangle_type>, "rectangles have width");
-    static_assert(rekt::has<struct label, crectangle_type>, "rectangles have label");
-    static_assert(!rekt::has<struct dont, crectangle_type>, "rectangles have no dont");
+    STATIC_REQUIRE(height.in(crec));
+    STATIC_REQUIRE(width.in(crec));
+    STATIC_REQUIRE(label.in(crec));
+    STATIC_REQUIRE(dont.not_in(crec));
     static_assert(std::is_same<decltype(height(crec)), float const &>(), "float field");
     static_assert(std::is_same<decltype(width(crec)), float const &>(), "float field");
     static_assert(std::is_same<decltype(label(crec)), std::string const &>(), "string field");
@@ -71,26 +71,23 @@ TEST_CASE("similar records with different factories")
   SECTION("empty make_record")
   {
     auto empty = rekt::make_record();
-    using empty_type = decltype(empty);
-    static_assert(!rekt::has<struct height, empty_type>, "empty defines no fields");
-    static_assert(!rekt::has<struct width, empty_type>, "empty defines no fields");
-    static_assert(!rekt::has<struct label, empty_type>, "empty defines no fields");
-    static_assert(!rekt::has<struct dont, empty_type>, "empty defines no fields");
-
+    STATIC_REQUIRE(height.not_in(empty));
+    STATIC_REQUIRE(width.not_in(empty));
+    STATIC_REQUIRE(label.not_in(empty));
+    STATIC_REQUIRE(dont.not_in(empty));
   }
 
   auto test_forward_as_record = [&](auto &&rectangle)
   {
-    using rectangle_type = decltype(rectangle);
-    static_assert(rekt::has<struct height, rectangle_type>, "rectangles have height");
-    static_assert(rekt::has<struct width, rectangle_type>, "rectangles have width");
-    static_assert(rekt::has<struct label, rectangle_type>, "rectangles have label");
-    static_assert(!rekt::has<struct dont, rectangle_type>, "rectangles have no dont");
+    STATIC_REQUIRE(height.in(rectangle));
+    STATIC_REQUIRE(width.in(rectangle));
+    STATIC_REQUIRE(label.in(rectangle));
+    STATIC_REQUIRE(dont.not_in(rectangle));
     static_assert(std::is_same<rekt::record<
                                    rekt::field<struct height, float const &>,
                                    rekt::field<struct width, float &>,
                                    rekt::field<struct label, std::string &&>> &&,
-                               rectangle_type>(),
+                               decltype(rectangle)>(),
                   "forward_as_record leaves references alone");
     static_assert(std::is_same<decltype(height(rectangle)), float const &>(), "float field");
     static_assert(std::is_same<decltype(width(rectangle)), float &>(), "float field");
@@ -102,11 +99,10 @@ TEST_CASE("similar records with different factories")
     REQUIRE(l == "rect");
 
     auto const &crec = rectangle;
-    using crectangle_type = decltype(crec);
-    static_assert(rekt::has<struct height, crectangle_type>, "rectangles have height");
-    static_assert(rekt::has<struct width, crectangle_type>, "rectangles have width");
-    static_assert(rekt::has<struct label, crectangle_type>, "rectangles have label");
-    static_assert(!rekt::has<struct dont, crectangle_type>, "rectangles have no dont");
+    STATIC_REQUIRE(height.in(crec));
+    STATIC_REQUIRE(width.in(crec));
+    STATIC_REQUIRE(label.in(crec));
+    STATIC_REQUIRE(dont.not_in(crec));
     static_assert(std::is_same<decltype(height(crec)), float const &>(), "float field");
     static_assert(std::is_same<decltype(width(crec)), float &>(), "float field");
     static_assert(std::is_same<decltype(label(crec)), std::string &&>(), "float field");
@@ -121,8 +117,6 @@ TEST_CASE("similar records with different factories")
 
 TEST_CASE("assignment")
 {
-  using namespace std::string_literals;
-
   auto const three = 3.F;
   auto four = 4.F;
   
@@ -165,26 +159,23 @@ TEST_CASE("array sugar")
 
 TEST_CASE("record composition functions")
 {
-  using namespace std::string_literals;
-
   // TODO more permutations, multiple override of one field
 
   auto const three = 3.F;
   auto four = 4.F;
   auto rectangle = rekt::make_record(height = three, width = four, label = "rect"s);
 
+  SECTION("remove rectangle's 'height'")
   {
     auto exclude_height = take(rectangle, width, label);
-    using exclude_height_type = decltype(exclude_height);
-    static_assert(!rekt::has<struct height, exclude_height_type>, "rectangles have height, but that field was not taken");
-    static_assert(rekt::has<struct width, exclude_height_type>, "rectangles have width");
-    static_assert(rekt::has<struct label, exclude_height_type>, "rectangles have label");
-    static_assert(!rekt::has<struct dont, exclude_height_type>, "rectangles have no dont");
-
+    STATIC_REQUIRE(height.not_in(exclude_height));
+    STATIC_REQUIRE(width.in(exclude_height));
+    STATIC_REQUIRE(label.in(exclude_height));
+    STATIC_REQUIRE(dont.not_in(exclude_height));
     static_assert(std::is_same<rekt::record<
                                    rekt::field<struct width, float>,
                                    rekt::field<struct label, std::string>>,
-                               exclude_height_type>(),
+                               decltype(exclude_height)>(),
                   "take uses make_record");
   }
 
@@ -196,27 +187,28 @@ TEST_CASE("record composition functions")
     static_assert(!rekt::has<struct dont, override_add>, "rectangles have no dont");
   }
 
+  SECTION("override rectangle's 'height' with a string")
   {
-    using override_height = decltype(rectangle ^ (height = "four"s));
+    STATIC_REQUIRE(height.in(rectangle ^ (height = "four"s)));
+    STATIC_REQUIRE(width.in(rectangle ^ (height = "four"s)));
+    STATIC_REQUIRE(label.in(rectangle ^ (height = "four"s)));
+    STATIC_REQUIRE(dont.not_in(rectangle ^ (height = "four"s)));
 
-    static_assert(rekt::has<struct height, override_height>, "rectangles have height, but that field is not usually a string");
-    static_assert(std::is_same<std::string &&, rekt::field_type_for<struct height, override_height>>(),
+    static_assert(std::is_same<decltype(height(rectangle ^ (height = "four"s))),
+      std::string &&>(),
                   "the height field is overridden to a string");
-    static_assert(rekt::has<struct width, override_height>, "rectangles have width");
-    static_assert(rekt::has<struct label, override_height>, "rectangles have label");
-    static_assert(!rekt::has<struct dont, override_height>, "rectangles have no dont");
 
     REQUIRE(height(rectangle ^ (height = "four"s)) == "four"s);
     REQUIRE(width(rectangle ^ (height = "four"s)) == width(rectangle));
     REQUIRE(label(rectangle ^ (height = "four"s)) == label(rectangle));
   }
 
+  SECTION("augment rectangle with 'dimensions'")
   {
+    STATIC_REQUIRE(dimensions.in(rectangle & (dimensions = std::make_pair(height, width))));
+    STATIC_REQUIRE(dont.not_in(rectangle & (dimensions = std::make_pair(height, width))));
+
     using add_dimensions = decltype(rectangle & (dimensions = std::make_pair(height, width)));
-
-    static_assert(rekt::has<struct dimensions, add_dimensions>, "augmented with field for dimensions");
-    static_assert(!rekt::has<struct dont, add_dimensions>, "rectangles have no dont");
-
     static_assert(std::is_same<std::pair<struct height, struct width> &&,
                                rekt::field_type_for<struct dimensions, add_dimensions>>(),
                   "the dimensions field is defined as a pair of symbols naming the axes which this rectangle spans");
@@ -255,12 +247,12 @@ auto get(rekt::properties, person_t const &)
 
 TEST_CASE("introspection functions")
 {
-  static_assert(rekt::has<struct name, person_t>(), "person_t defines name");
-  static_assert(rekt::has<struct age, person_t>(), "person_t defines age");
-  static_assert(rekt::has<struct friends, person_t>(), "person_t defines age");
-  static_assert(!rekt::has<struct dont, person_t>(), "person_t doesn't define dont");
-
   person_t genos = { "genos", 19 };
+
+  STATIC_REQUIRE(name.in(genos));
+  STATIC_REQUIRE(age.in(genos));
+  STATIC_REQUIRE(friends.in(genos));
+  STATIC_REQUIRE(dont.not_in(genos));
 
   REQUIRE(name(genos) == "genos");
   REQUIRE(age(genos) == 19);

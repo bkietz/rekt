@@ -216,6 +216,30 @@ struct symbol
   {
     return get(Symbol{}, std::forward<Record>(r));
   }
+
+  template <typename Record>
+  constexpr auto in() const
+  {
+    return has<Symbol, Record>;
+  }
+
+  template <typename Record>
+  constexpr auto in(Record&&) const
+  {
+    return has<Symbol, Record&&>;
+  }
+
+  template <typename Record>
+  constexpr auto not_in() const
+  {
+    return integer_c<bool, !has<Symbol, Record>>;
+  }
+
+  template <typename Record>
+  constexpr auto not_in(Record&&) const
+  {
+    return integer_c<bool, !has<Symbol, Record&&>>;
+  }
 };
 
 template <typename L, typename R>
