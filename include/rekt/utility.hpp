@@ -89,5 +89,11 @@ constexpr decltype(auto) if_constexpr(std::false_type const &, Then &&, Else &&e
   return std::forward<Else>(e);
 }
 
+template <typename To, typename From>
+constexpr To static_cast_(type_constant<To>, From &&f)
+{
+  return static_cast<To>(std::forward<From>(f));
+}
+
 } // namespace
 } // namespace rekt

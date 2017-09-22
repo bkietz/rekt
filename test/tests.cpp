@@ -1,5 +1,6 @@
 #include <catch.hpp>
 #include <rekt.hpp>
+#include "move_only.hpp"
 
 #include <string>
 
@@ -113,6 +114,18 @@ TEST_CASE("similar records with different factories")
     test_forward_as_record(rekt::forward_as_record(height = three, width = four, label = "rect"s));
     test_forward_as_record(rekt::forward_as_record(three - as_(height), let_(width) = four, label = "rect"s));
   }
+}
+
+TEST_CASE("move_only")
+{
+  auto m0 = make_record(label = move_only{"m"});
+  static_assert(!std::is_copy_constructible<decltype(m0)>{}, "");
+  auto m1 = std::move(m0);
+  REQUIRE(label(m0).name() == "<moved>");
+  REQUIRE(label(m1).name() == "m");
+
+  // verify that a lambda can be a field
+  auto f = make_record(label = []{ return "f"; });
 }
 
 TEST_CASE("assignment")

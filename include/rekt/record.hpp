@@ -6,7 +6,7 @@
 #pragma once
 
 #include <rekt/detail/array.hpp>
-#include <rekt/detail/map_macro.hpp>
+#include <rekt/detail/storage.hpp>
 #include <rekt/record_traits.hpp>
 
 namespace rekt
@@ -23,70 +23,13 @@ namespace
 template <typename Symbol, typename Value>
 class field;
 
-template <typename Value, bool IsEmpty>
-class field_impl;
-
-template <typename Value>
-class field_impl<Value, false>
-{
-public:
-  using value_type = Value;
-
-  template <typename... Args>
-  constexpr field_impl(Args &&... args)
-      : value_{ std::forward<Args>(args)... }
-  {
-  }
-
-  constexpr decltype(auto) value() const
-  {
-    return if_constexpr(std::is_reference<value_type>{},
-                        static_cast<value_type>(value_),
-                        static_cast<value_type const &>(value_));
-  }
-
-  decltype(auto) value()
-  {
-    return if_constexpr(std::is_reference<value_type>{},
-                        static_cast<value_type>(value_),
-                        static_cast<value_type &>(value_));
-  }
-
-private:
-  value_type value_;
-};
-
-template <typename EmptyValue>
-class field_impl<EmptyValue, true>
-    : private EmptyValue
-{
-public:
-  using value_type = EmptyValue;
-
-  template <typename... Args>
-  constexpr field_impl(Args &&... args)
-      : value_type{ std::forward<Args>(args)... }
-  {
-  }
-
-  constexpr decltype(auto) value() const
-  {
-    return static_cast<value_type const &>(*this);
-  }
-
-  decltype(auto) value()
-  {
-    return static_cast<value_type &>(*this);
-  }
-};
-
 template <typename Symbol, typename Value>
 class field
-    : private field_impl<Value, std::is_empty<Value>::value>
+    : private storage<Value, std::is_empty<Value>::value>
 {
 public:
   using value_type = Value;
-  using storage_type = field_impl<Value, std::is_empty<Value>::value>;
+  using storage_type = storage<Value, std::is_empty<Value>::value>;
 
   template <typename... Args>
   constexpr field(Args &&... args)
