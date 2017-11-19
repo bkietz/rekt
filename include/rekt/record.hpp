@@ -98,8 +98,10 @@ class record<field<Symbol, Value>...>
       public field<Symbol, Value>...
 {
 public:
+  constexpr record() = default;
+
   template <typename... Args>
-  record(Args &&... args)
+  constexpr record(Args &&... args)
       : field<Symbol, Value>{ std::forward<Args>(args) }...
   {
   }
@@ -283,6 +285,12 @@ template <typename... Symbols, typename Record, typename Function>
 constexpr auto map(Record &&r, Function &&f, symbol_set<Symbols...> const & = {})
 {
   return make_record(make_field(Symbols{}, f(Symbols{}, get(Symbols{}, std::forward<Record>(r))))...);
+}
+
+template <typename... Symbol, typename... Value, typename Function>
+constexpr auto map(record<field<Symbol, Value>...> const &rec, Function &&f)
+{
+  return make_record(make_field(Symbol{}, f(Symbol{}, get(Symbol{}, rec)))...);
 }
 
 ///

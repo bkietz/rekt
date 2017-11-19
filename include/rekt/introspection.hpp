@@ -6,18 +6,58 @@
 #pragma once
 
 #include <rekt/record.hpp>
+#include <rekt/detail/pretty_function.hpp>
+#include <string>
 
 namespace rekt
 {
 namespace
 {
 
+template <typename Symbol>
+std::string nameof(Symbol const & = {})
+{
+  constexpr auto const &n = pretty_function::type_name<Symbol>::value;
+  return std::string{ n.begin(), n.end() };
+}
+
+///
+/// get(sym, get(rekt::properties{}, rec)) should be a value from which a
+///   property accessor for `sym` can be constructed
+/// don't use this for a field in rekt::record or things will start breaking
+///   TODO assert, don't comment
 struct properties : symbol<properties>
 {
 };
 
-// field_enum
-// get from an object with properties defined
+///
+/// field_enum can be defined to provide a record mapping symbols to index_constants
+///   which makes a declared, ordered listing of symbols for a type.
+///   field_enum is already defined for rekt::record and any type which has rekt::properties
+struct field_enum : symbol<struct field_enum>
+{
+  template <typename... Symbols, std::size_t... I>
+  constexpr auto make(symbol_set<Symbols...> const&, index_sequence<I...> const&) const
+  {
+    return make_record(make_field(Symbols{}, index_c<I>)...);
+  }
+
+  template <typename... Symbols>
+  constexpr auto make(Symbols const&...) const
+  {
+    return make(symbol_set<Symbols...>{}, index_sequence_for<Symbols...>{});
+  }
+};
+
+constexpr struct field_enum field_enum = {};
+
+template <typename... Symbol, typename... Value>
+constexpr auto get(struct field_enum const&, record<field<Symbol, Value>...> const&)
+{
+  return field_enum.make(symbol_set<Symbol...>{}, index_sequence_for<Symbol...>{});
+}
+
+
 
 ///
 /// superjank type trait to help visual studio out with enabling fields for one symbol
@@ -181,6 +221,43 @@ constexpr decltype(auto) get(Symbol const &, Record &&r,
                              std::enable_if_t<has_property_for<Symbol, Record &&>()> * = nullptr)
 {
   return make_property_reference(get(Symbol{}, get(::rekt::properties{}, r)), std::forward<Record>(r));
+}
+
+template <typename Record>
+constexpr auto get(struct field_enum const&, Record &&r,
+  enable_if_has<properties, Record&&> * = nullptr)
+{
+  return field_enum(get(properties{}, std::forward<Record>(r)));
+}
+
+template <typename Record, typename AssociativeContainer>
+Record unpack(type_constant<Record> const&, AssociativeContainer const &container)
+{
+  // TODO assert default constructibility
+  Record rec;
+  // TODO allow custom conversion
+  // FIXME handle readonly fields
+  // FIXME report key/values which don't correspond to a field
+  map(field_enum(rec), [&rec, &container](auto const &sym, std::size_t)
+  {
+    auto it = container.find(nameof(sym));
+    // FIXME handle missing fields
+    get(sym, rec) = it->second;
+  });
+  return rec;
+}
+
+template <typename Record, typename AssociativeContainer>
+AssociativeContainer pack(type_constant<AssociativeContainer> const&, Record &&rec)
+{
+  AssociativeContainer container;
+  // TODO allow custom conversion
+  // FIXME handle writeonly fields
+  map(field_enum(rec), [&rec, &container](auto const &sym, std::size_t)
+  {
+    container.emplace(nameof(sym), get(sym, std::forward<Record>(rec)));
+  });
+  return container;
 }
 
 } // namespace

@@ -27,7 +27,7 @@ auto get(rekt::properties, person_t const&)
 {
   return make_record(
     name = &person_t::name,
-    age = rekt::prop(&person_t::get_age, &person_t::set_age),
+    age = rekt::get_set(&person_t::get_age, &person_t::set_age),
     friends = [](person_t const &p) { return poke_server_for_friends(p.name); }
   );
 }
@@ -76,7 +76,7 @@ Symbols can access their own (fully qualified) names.
 This allows most record types to be unpacked from associative containers like parsed JSON objects trivially:
 
 ```c++
-person_t genos = unpack(type_c<person_t>, nlohmann::json{{
+person_t genos = unpack(type_c<person_t>, nlohmann::json{
   {"name", "Genos"},
   {"age", 35}
 });

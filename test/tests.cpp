@@ -3,13 +3,15 @@
 #include "move_only.hpp"
 
 #include <string>
+#include <vector>
+#include <unordered_map>
+#include <nlohmann/json.hpp>
 
 REKT_SYMBOLS(height, width, label, dont);
 
 // helper for asserting non-constexpr integer_constants
 #define STATIC_REQUIRE(...) static_assert(decltype(__VA_ARGS__)::value, #__VA_ARGS__)
 
-// TODO test with move-only objects!!!
 // TODO break these into smaller cases with tags
 
 // TODO find a home for these:
@@ -26,7 +28,6 @@ REKT_SYMBOLS(height, width, label, dont);
 //static_assert(!rekt::has<struct width, rekt::field<struct height, int&&> &&>, "a field has a field defined for its symbol");
 
 using namespace std::string_literals;
-using rekt::type_c;
 
 TEST_CASE("similar records with different factories")
 {
@@ -153,7 +154,7 @@ TEST_CASE("assignment")
   {
     auto rectangle = rekt::make_record(height = three, width = four, label = "rect"s);
     rectangle = rectangle; // just to make sure this compiles
-    rectangle = rekt::make_record(height = 2, width = 5, label = "other rect"s);
+    rectangle = rekt::make_record(height = 2.F, width = 5.F, label = "other rect"s);
 
     REQUIRE(height(rectangle) == 2);
     REQUIRE(width(rectangle) == 5);
@@ -231,6 +232,13 @@ TEST_CASE("record composition functions")
 
 REKT_SYMBOLS(name, age, friends);
 
+namespace hero
+{
+  REKT_SYMBOLS(name);
+
+  std::unordered_map<std::string, std::string> name_registry;
+}
+
 struct person_t
 {
   std::string name;
@@ -245,17 +253,27 @@ struct person_t
     age_ = age;
   }
 
-  static auto get_friends(person_t const &p)
+  static auto &get_freinds(person_t const &p)
   {
-    return p.name.size();
+    static std::unordered_map<std::string, std::vector<std::string>> friends_server_;
+    return friends_server_[p.name];
   }
 };
 
 auto get(rekt::properties, person_t const &)
 {
   return make_record(name = &person_t::name,
-                     age = rekt::get_set(&person_t::get_age, &person_t::set_age),
-                     friends = person_t::get_friends);
+    hero::name = [](person_t const &p)
+    {
+      // FIXME I want to be able to do this:
+      // auto it = hero::name_registry.find(name(p));
+      auto it = hero::name_registry.find(p.name);
+      return it != hero::name_registry.end()
+        ? it->second
+        : "<no hero name>"s;
+    },
+    age = rekt::get_set(&person_t::get_age, &person_t::set_age),
+    friends = person_t::get_freinds);
 }
 
 TEST_CASE("introspection functions")
@@ -263,6 +281,7 @@ TEST_CASE("introspection functions")
   person_t genos = { "genos", 19 };
 
   STATIC_REQUIRE(name.in(genos));
+  STATIC_REQUIRE(hero::name.in(genos));
   STATIC_REQUIRE(age.in(genos));
   STATIC_REQUIRE(friends.in(genos));
   STATIC_REQUIRE(dont.not_in(genos));
@@ -271,4 +290,23 @@ TEST_CASE("introspection functions")
   REQUIRE(age(genos) == 19);
   age(genos) = 20;
   REQUIRE(age(genos) == 20);
+
+  REQUIRE(rekt::nameof(age) == "age");
+  REQUIRE(rekt::nameof(hero::name) == "hero::name");
+}
+
+TEST_CASE("unpacking")
+{
+  auto genos_json = nlohmann::json{
+    { "name", "genos" },
+    { "age", 19 }
+  };
+  auto genos = rekt::make_record(name = "geonos"s, age = 19);
+
+  auto packed = rekt::pack(rekt::type_c<nlohmann::json>, genos);
+  REQUIRE(packed == genos_json);
+
+  auto unpacked = rekt::unpack(rekt::type_c<decltype(genos)>, genos_json);
+  REQUIRE(name(genos) == name(unpacked));
+  REQUIRE(age(genos) == age(unpacked));
 }
