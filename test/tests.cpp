@@ -6,6 +6,7 @@
 #include <vector>
 #include <unordered_map>
 #include <nlohmann/json.hpp>
+#include <iostream>
 
 REKT_SYMBOLS(height, width, label, dont);
 
@@ -301,12 +302,14 @@ TEST_CASE("unpacking")
     { "name", "genos" },
     { "age", 19 }
   };
-  auto genos = rekt::make_record(name = "geonos"s, age = 19);
+  auto genos = rekt::make_record(name = "genos"s, age = 19);
 
-  auto packed = rekt::pack(rekt::type_c<nlohmann::json>, genos);
+  nlohmann::json packed;
+  rekt::pack(genos, &packed);
   REQUIRE(packed == genos_json);
 
-  auto unpacked = rekt::unpack(rekt::type_c<decltype(genos)>, genos_json);
+  decltype(genos) unpacked;
+  rekt::unpack(genos_json, &unpacked);
   REQUIRE(name(genos) == name(unpacked));
   REQUIRE(age(genos) == age(unpacked));
 }

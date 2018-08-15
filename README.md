@@ -76,8 +76,15 @@ Symbols can access their own (fully qualified) names.
 This allows most record types to be unpacked from associative containers like parsed JSON objects trivially:
 
 ```c++
-person_t genos = unpack(type_c<person_t>, nlohmann::json{
+nlohmann::json packed{
   {"name", "Genos"},
   {"age", 35}
-});
+};
+
+person_t genos;
+rekt::unpack(packed, &genos);
+
+nlohmann::json repacked;
+rekt::pack(genos, &repacked);
+assert(packed == repacked);
 ```

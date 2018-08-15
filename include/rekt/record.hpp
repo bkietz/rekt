@@ -42,7 +42,7 @@ public:
     return storage_type::value();
   }
 
-  decltype(auto) value()
+  constexpr decltype(auto) value()
   {
     return storage_type::value();
   }
@@ -282,7 +282,7 @@ constexpr auto take(Record &&r, Symbols const &...)
 /// the symbol set and the value of the mapped record for that
 /// symbol.
 template <typename... Symbols, typename Record, typename Function>
-constexpr auto map(Record &&r, Function &&f, symbol_set<Symbols...> const & = {})
+constexpr auto map(Record &&r, Function &&f, symbol_set<Symbols...> const&)
 {
   return make_record(make_field(Symbols{}, f(Symbols{}, get(Symbols{}, std::forward<Record>(r))))...);
 }

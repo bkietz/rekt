@@ -47,6 +47,12 @@ struct field_enum : symbol<struct field_enum>
   {
     return make(symbol_set<Symbols...>{}, index_sequence_for<Symbols...>{});
   }
+
+  template <typename Record, typename Function>
+  constexpr auto map(Record &&r, Function &&f) const
+  {
+    return rekt::map(get(field_enum{}, r), std::forward<Function>(f));
+  }
 };
 
 constexpr struct field_enum field_enum = {};
@@ -230,34 +236,31 @@ constexpr auto get(struct field_enum const&, Record &&r,
   return field_enum(get(properties{}, std::forward<Record>(r)));
 }
 
-template <typename Record, typename AssociativeContainer>
-Record unpack(type_constant<Record> const&, AssociativeContainer const &container)
+template <typename AssociativeContainer, typename Record>
+void unpack(AssociativeContainer const &container, Record *rec)
 {
-  // TODO assert default constructibility
-  Record rec;
   // TODO allow custom conversion
   // FIXME handle readonly fields
   // FIXME report key/values which don't correspond to a field
-  map(field_enum(rec), [&rec, &container](auto const &sym, std::size_t)
+  field_enum.map(*rec, [rec, &container](auto const &sym, std::size_t)
   {
     auto it = container.find(nameof(sym));
     // FIXME handle missing fields
-    get(sym, rec) = it->second;
+    get(sym, *rec) = container[nameof(sym)];
+    return true;
   });
-  return rec;
 }
 
 template <typename Record, typename AssociativeContainer>
-AssociativeContainer pack(type_constant<AssociativeContainer> const&, Record &&rec)
+void pack(Record &&rec, AssociativeContainer *container)
 {
-  AssociativeContainer container;
   // TODO allow custom conversion
   // FIXME handle writeonly fields
-  map(field_enum(rec), [&rec, &container](auto const &sym, std::size_t)
+  field_enum.map(rec, [&rec, container](auto const &sym, std::size_t index)
   {
-    container.emplace(nameof(sym), get(sym, std::forward<Record>(rec)));
+    container->emplace(nameof(sym), get(sym, std::forward<Record>(rec)));
+    return true;
   });
-  return container;
 }
 
 } // namespace
