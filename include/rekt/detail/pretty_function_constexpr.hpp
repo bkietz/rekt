@@ -64,6 +64,10 @@ struct type_name
   static constexpr std::array<char, length> value = make_array(begin, index_c<length>);
 };
 
+template <typename T>
+constexpr std::array<char, type_name<T>::length> type_name<T>::value;
+
+
 struct crib {};
 constexpr struct crib crib = {};
 
