@@ -98,7 +98,7 @@ template <typename SymbolSet, typename Record>
 constexpr auto has_all = has_all_impl<Record>(SymbolSet{});
 
 template <typename Symbol, typename Record>
-using field_type_for = decltype(get(Symbol{}, type_c<Record>.declval()));
+using field_type_for = decltype(get(Symbol{}, std::declval<Record>()));
 
 } // namespace
 } // namespace rekt

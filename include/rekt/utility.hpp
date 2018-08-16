@@ -39,10 +39,6 @@ template <typename T>
 struct type_constant
 {
   using type = T;
-  constexpr decltype(auto) declval() const noexcept
-  {
-    return std::declval<type>();
-  }
 };
 
 template <typename T>
