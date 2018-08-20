@@ -100,9 +100,13 @@ class record<field<Symbol, Value>...>
 public:
   constexpr record() = default;
 
-  template <typename... Args>
-  constexpr record(Args &&... args)
-      : field<Symbol, Value>{ std::forward<Args>(args) }...
+  constexpr record(Value... args)
+      : field<Symbol, Value>{ static_cast<Value&&>(args) }...
+  {
+  }
+
+  constexpr record(field<Symbol, Value>... fields)
+      : field<Symbol, Value>{ std::move(fields) }...
   {
   }
 
@@ -112,6 +116,17 @@ public:
   record &operator=(OtherRecord &&other)
   {
     return assign_fields(*this, std::forward<OtherRecord>(other), symbol_set<Symbol...>{});
+  }
+};
+
+template <>
+class record<>
+{
+public:
+  template <typename OtherRecord>
+  record &operator=(OtherRecord &&)
+  {
+    return *this;
   }
 };
 
