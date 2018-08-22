@@ -303,9 +303,21 @@ constexpr auto map(Record &&r, Function &&f, symbol_set<Symbols...> const&)
 }
 
 template <typename... Symbol, typename... Value, typename Function>
+constexpr auto map(record<field<Symbol, Value>...> &rec, Function &&f)
+{
+  return make_record(make_field(Symbol{}, f(Symbol{}, get(Symbol{}, rec)))...);
+}
+
+template <typename... Symbol, typename... Value, typename Function>
 constexpr auto map(record<field<Symbol, Value>...> const &rec, Function &&f)
 {
   return make_record(make_field(Symbol{}, f(Symbol{}, get(Symbol{}, rec)))...);
+}
+
+template <typename... Symbol, typename... Value, typename Function>
+constexpr auto map(record<field<Symbol, Value>...> &&rec, Function &&f)
+{
+  return make_record(make_field(Symbol{}, f(Symbol{}, get(Symbol{}, std::move(rec))))...);
 }
 
 ///

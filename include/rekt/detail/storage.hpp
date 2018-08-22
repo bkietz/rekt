@@ -34,7 +34,7 @@ public:
     return static_cast_(t, value_);
   }
 
-  decltype(auto) value()
+  constexpr decltype(auto) value()
   {
     auto t = if_constexpr(std::is_reference<value_type>{},
 		          type_c<value_type>,
@@ -44,6 +44,22 @@ public:
 
 private:
   value_type value_;
+};
+
+template <typename Element>
+class storage<Element[], false>
+  : protected storage<Element*, false>
+{
+public:
+  constexpr storage(Element *p)
+    : storage<Element*, false>{ p }
+  {
+  }
+
+  constexpr storage()
+    : storage<Element*, false>{ nullptr }
+  {
+  }
 };
 
 template <typename EmptyValue>
@@ -64,7 +80,7 @@ public:
     return static_cast<value_type const &>(*this);
   }
 
-  decltype(auto) value()
+  constexpr decltype(auto) value()
   {
     return static_cast<value_type &>(*this);
   }
