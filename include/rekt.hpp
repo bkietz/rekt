@@ -10,3 +10,4 @@
 #include <rekt/record_traits.hpp>
 #include <rekt/symbols_macro.hpp>
 #include <rekt/utility.hpp>
+#include <rekt/iterator.hpp>

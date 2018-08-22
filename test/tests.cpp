@@ -167,6 +167,8 @@ REKT_SYMBOLS(dimensions);
 
 TEST_CASE("array sugar")
 {
+  rekt::record<rekt::field<struct label, int[]>> naked;
+  label(naked) = nullptr;
   auto cuboid = rekt::make_record(dimensions = { 3, 4, 5 }, label = "cuboid");
   REQUIRE(dimensions(cuboid) == (std::array<int, 3>{ 3, 4, 5 }));
   REQUIRE(label(cuboid) == (std::array<char, 7>{ 'c', 'u', 'b', 'o', 'i', 'd', '\0' }));
@@ -312,4 +314,25 @@ TEST_CASE("unpacking")
   rekt::unpack(genos_json, &unpacked);
   REQUIRE(name(genos) == name(unpacked));
   REQUIRE(age(genos) == age(unpacked));
+}
+
+TEST_CASE("iteration")
+{
+  std::vector<int> indices{ 1, 2, 0 };
+  std::string strings[] = { "world", "!", "hello" };
+
+  REKT_SYMBOLS(index, string, expected);
+  auto zipped = rekt::zip(index = indices, string = strings);
+  std::sort(zipped.begin(), zipped.end(), [&](auto const &l, auto const &r)
+  {
+    return index(l) < index(r);
+  });
+
+  REQUIRE(std::is_sorted(indices.begin(), indices.end()));
+
+  std::vector<std::string> sorted_by_index{ "hello", "world", "!" };
+  for (auto r : rekt::zip(string = strings, expected = sorted_by_index))
+  {
+    REQUIRE(string(r) == expected(r));
+  }
 }
