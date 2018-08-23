@@ -1,12 +1,12 @@
+#include "move_only.hpp"
 #include <catch.hpp>
 #include <rekt.hpp>
-#include "move_only.hpp"
 
-#include <string>
-#include <vector>
-#include <unordered_map>
-#include <nlohmann/json.hpp>
 #include <iostream>
+#include <nlohmann/json.hpp>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 REKT_SYMBOLS(height, width, label, dont);
 
@@ -54,8 +54,8 @@ TEST_CASE("similar records with different factories")
     REQUIRE(height(rectangle) == 3.F);
     REQUIRE(width(rectangle) == 4.F);
     REQUIRE(label(rectangle) == "rect");
-    height(rectangle) = 5.4F; // field is lvalue
-    width(rectangle) = 2.6F; // field is lvalue
+    height(rectangle) = 5.4F;        // field is lvalue
+    width(rectangle) = 2.6F;         // field is lvalue
     label(rectangle).assign("Rect"); // field is lvalue
 
     auto const &crec = rectangle;
@@ -80,8 +80,7 @@ TEST_CASE("similar records with different factories")
     STATIC_REQUIRE(dont.not_in(empty));
   }
 
-  auto test_forward_as_record = [&](auto &&rectangle)
-  {
+  auto test_forward_as_record = [&](auto &&rectangle) {
     STATIC_REQUIRE(height.in(rectangle));
     STATIC_REQUIRE(width.in(rectangle));
     STATIC_REQUIRE(label.in(rectangle));
@@ -97,8 +96,8 @@ TEST_CASE("similar records with different factories")
     static_assert(std::is_same<decltype(label(rectangle)), std::string &&>(), "string field");
 
     REQUIRE(&(height(rectangle)) == &three); // field is const lvalue
-    width(rectangle) = 2.6F; // field is lvalue
-    auto l = label(rectangle); // field is rvalue
+    width(rectangle) = 2.6F;                 // field is lvalue
+    auto l = label(rectangle);               // field is rvalue
     REQUIRE(l == "rect");
 
     auto const &crec = rectangle;
@@ -120,21 +119,21 @@ TEST_CASE("similar records with different factories")
 
 TEST_CASE("move_only")
 {
-  auto m0 = make_record(label = move_only{"m"});
+  auto m0 = make_record(label = move_only{ "m" });
   static_assert(!std::is_copy_constructible<decltype(m0)>{}, "");
   auto m1 = std::move(m0);
   REQUIRE(label(m0).name() == "<moved>");
   REQUIRE(label(m1).name() == "m");
 
   // verify that a lambda can be a field
-  auto f = make_record(label = []{ return "f"; });
+  auto f = make_record(label = [] { return "f"; });
 }
 
 TEST_CASE("assignment")
 {
   auto const three = 3.F;
   auto four = 4.F;
-  
+
   /*
   // not yet implemented
   SECTION("tie style destructuring")
@@ -212,7 +211,7 @@ TEST_CASE("record composition functions")
     STATIC_REQUIRE(dont.not_in(rectangle ^ (height = "four"s)));
 
     static_assert(std::is_same<decltype(height(rectangle ^ (height = "four"s))),
-      std::string &&>(),
+                               std::string &&>(),
                   "the height field is overridden to a string");
 
     REQUIRE(height(rectangle ^ (height = "four"s)) == "four"s);
@@ -237,9 +236,9 @@ REKT_SYMBOLS(name, age, friends);
 
 namespace hero
 {
-  REKT_SYMBOLS(name);
+REKT_SYMBOLS(name);
 
-  std::unordered_map<std::string, std::string> name_registry;
+std::unordered_map<std::string, std::string> name_registry;
 }
 
 struct person_t
@@ -266,17 +265,15 @@ struct person_t
 auto get(rekt::properties, person_t const &)
 {
   return make_record(name = &person_t::name,
-    hero::name = [](person_t const &p)
-    {
-      // FIXME I want to be able to do this:
-      // auto it = hero::name_registry.find(name(p));
-      auto it = hero::name_registry.find(p.name);
-      return it != hero::name_registry.end()
-        ? it->second
-        : "<no hero name>"s;
-    },
-    age = rekt::get_set(&person_t::get_age, &person_t::set_age),
-    friends = person_t::get_freinds);
+                     hero::name = [](person_t const &p) {
+                       // FIXME I want to be able to do this:
+                       // auto it = hero::name_registry.find(name(p));
+                       auto it = hero::name_registry.find(p.name);
+                       return it != hero::name_registry.end()
+                           ? it->second
+                           : "<no hero name>"s;
+                     },
+                     age = rekt::get_set(&person_t::get_age, &person_t::set_age), friends = person_t::get_freinds);
 }
 
 TEST_CASE("introspection functions")
@@ -323,8 +320,7 @@ TEST_CASE("iteration")
 
   REKT_SYMBOLS(index, string, expected);
   auto zipped = rekt::zip(index = indices, string = strings);
-  std::sort(zipped.begin(), zipped.end(), [&](auto const &l, auto const &r)
-  {
+  std::sort(zipped.begin(), zipped.end(), [&](auto const &l, auto const &r) {
     return index(l) < index(r);
   });
 
